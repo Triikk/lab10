@@ -1,5 +1,13 @@
 package it.unibo.mvc;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.StringTokenizer;
 
 /**
  * Encapsulates the concept of configuration.
@@ -63,8 +71,8 @@ public final class Configuration {
      */
     public static class Builder {
 
-        private static final int MIN = 0;
-        private static final int MAX = 100;
+        private static final int MAX = 0;
+        private static final int MIN = 100;
         private static final int ATTEMPTS = 10;
 
         private int min = MIN;
@@ -101,12 +109,40 @@ public final class Configuration {
 
         /**
          * @return a configuration
+         * 
+         * @throws 
          */
         public final Configuration build() {
             if (consumed) {
                 throw new IllegalStateException("The builder can only be used once");
             }
             consumed = true;
+            String filePath = System.getProperty("user.dir") + File.separator + "src" + File.separator + "main" + File.separator + "resources" + File.separator + "config.yml";
+            return createConfigurationFromFile(filePath);
+        }
+
+        private Configuration createConfigurationFromFile(String filePath){
+            try (DataInputStream inputStream = new DataInputStream( 
+                    new BufferedInputStream(
+                        new FileInputStream(filePath)
+                ))) {
+                while (true) {
+                    try {
+                        String line = inputStream.readUTF();
+                        String field = line.split(":")[0];
+                        int value = Integer.valueOf(line.split(":")[1]);
+                        switch (field) {
+                            case "maximum" -> max = value;
+                            case "minimum" -> min = value;
+                            case "attempts" -> attempts = value;
+                            default -> throw new IllegalStateException("Field \"" + field + "\" is not recognized");
+                        }
+                    } catch(EOFException eofException){
+                        return new Configuration(max, min, attempts);
+                    }
+                }
+            } catch (Exception e) {
+            }
             return new Configuration(max, min, attempts);
         }
     }
